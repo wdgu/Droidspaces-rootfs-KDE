@@ -302,7 +302,6 @@ jobs:
           fi
           echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
           echo "KDE Wayland 包滚动 Release: $release_tag"
-
   # --------------------------------------------------------
   # 阶段 2: build (常规 Linux 发行版 RootFS 的构建)
   # --------------------------------------------------------
