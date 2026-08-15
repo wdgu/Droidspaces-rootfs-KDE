@@ -343,6 +343,7 @@ jobs:
 
           case "$TEMPLATE" in
             Debian-13-KDE) archive_target=debian13 ;;
+            Ubuntu-24-KDE) archive_target=ubuntu2404 ;;
             Ubuntu-26-KDE) archive_target=ubuntu2604 ;;
             Fedora-43-KDE) archive_target=fedora43 ;;
             Fedora-44-KDE) archive_target=fedora44 ;;
