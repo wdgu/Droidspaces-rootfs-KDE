@@ -151,13 +151,17 @@ jobs:
               WAYLAND_PACKAGE_TARGET="all"
               ;;
             all-wayland)
-              TEMPLATES=$(jq -n -c '["Debian-13-KDE","Ubuntu-26-KDE","Fedora-43-KDE","Fedora-44-KDE","Arch-KDE"]')
+              TEMPLATES=$(jq -n -c '["Debian-13-KDE","Ubuntu-24-KDE","Ubuntu-26-KDE","Fedora-43-KDE","Fedora-44-KDE","Arch-KDE"]')
               ENABLE_ANLAND_KDE="true"
               WAYLAND_PACKAGE_TARGET="all"
               ;;
             Debian-13-KDE)
               TEMPLATES=$(jq -n -c --arg t "$TARGET" '[$t]')
               WAYLAND_PACKAGE_TARGET="Debian13"
+              ;;
+            Ubuntu-24-KDE)
+              TEMPLATES=$(jq -n -c --arg t "$TARGET" '[$t]')
+              WAYLAND_PACKAGE_TARGET="ubuntu2404"
               ;;
             Ubuntu-26-KDE)
               TEMPLATES=$(jq -n -c --arg t "$TARGET" '[$t]')
