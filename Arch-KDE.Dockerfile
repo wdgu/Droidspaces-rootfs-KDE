@@ -77,8 +77,10 @@ RUN chmod +x /usr/local/sbin/install-anland-kde && \
     fi && \
     # Arch 强制安装，但是这玩意不开硬件访问会导致桌面闪退
     if [ "$BUILD_KDE" = "conc" ] || [ "$BUILD_KDE" = "min" ] ; then \
-        mv /usr/lib/xdg-desktop-portal /usr/lib/xdg-desktop-portal.bak && \
-        mv /usr/lib/xdg-desktop-portal-kde /usr/lib/xdg-desktop-portal-kde.bak; \
+        if [ "$ENABLE_systemd257_ARG" != "true" ]; then \
+            mv /usr/lib/xdg-desktop-portal /usr/lib/xdg-desktop-portal.bak || true && \
+            mv /usr/lib/xdg-desktop-portal-kde /usr/lib/xdg-desktop-portal-kde.bak || true; \
+        fi; \
     fi && \
     ######################################################################################################
     #输入法 fcitx5 (可选)
@@ -148,6 +150,24 @@ RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
 
 # 为所有 Arch RootFS 安装 Droidspaces USB Manager
 RUN /usr/local/sbin/install-droidspaces-usb-manager --user "${USERNAME}"
+
+# Ensure xdg-desktop-portal, polkit and DBus are available and enable user linger for systemd257
+RUN if [ "$ENABLE_systemd257_ARG" = "true" ]; then \
+    pacman -S --noconfirm --needed xdg-desktop-portal xdg-desktop-portal-kde polkit-kde-agent dbus || true; \
+    mkdir -p /etc/systemd/system/multi-user.target.wants; \
+    if [ -f "/usr/lib/systemd/system/xdg-desktop-portal.service" ]; then \
+        ln -sf /usr/lib/systemd/system/xdg-desktop-portal.service /etc/systemd/system/multi-user.target.wants/xdg-desktop-portal.service; \
+    fi; \
+    if [ -f "/usr/lib/systemd/system/xdg-desktop-portal-kde.service" ]; then \
+        ln -sf /usr/lib/systemd/system/xdg-desktop-portal-kde.service /etc/systemd/system/multi-user.target.wants/xdg-desktop-portal-kde.service; \
+    fi; \
+    if [ -f "/usr/lib/systemd/system/dbus.service" ]; then \
+        ln -sf /usr/lib/systemd/system/dbus.service /etc/systemd/system/multi-user.target.wants/dbus.service; \
+    fi; \
+    # Create XDG_RUNTIME_DIR for the user so some KDE components can start under systemd257
+    mkdir -p /run/user/$(id -u ${USERNAME}) && chown ${USERNAME}:${USERNAME} /run/user/$(id -u ${USERNAME}) || true; \
+    if command -v loginctl >/dev/null 2>&1; then loginctl enable-linger ${USERNAME} || true; fi; \
+fi
 
 # 为 droidspaces 的 su/su -l 入口建立完整的 systemd 用户会话。
 RUN for pam_file in /etc/pam.d/su /etc/pam.d/su-l; do \
@@ -263,7 +283,7 @@ RUN if [ "$ENABLE_mesa_ARG" = "true" ]; then \
         echo "--> [跳过] 未开启 Mesa 驱动安装"; \
     fi
 
-# 修复容器内的 DHCP 网络服务配置
+# 修复容器内的 DHCP网络服务配置
 RUN mkdir -p /etc/systemd/network && \
     cat <<'EOF' > /etc/systemd/network/10-eth-dhcp.network
 [Match]
