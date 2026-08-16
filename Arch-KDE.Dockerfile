@@ -29,6 +29,7 @@ COPY scripts/install-anland-kde.sh /usr/local/sbin/install-anland-kde
 
 RUN chmod +x /usr/local/sbin/install-anland-kde && \
     sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf && \
+    sed -i 's|^SigLevel = Required DatabaseOptional|SigLevel = Optional DatabaseOptional|' /etc/pacman.conf && \
     sed -i '/NoExtract.*locale/d' /etc/pacman.conf && \
     sed -i '/NoExtract.*i18n/d' /etc/pacman.conf && \
     pacman -Sy --noconfirm archlinux-keyring glibc && \
@@ -150,11 +151,11 @@ RUN /usr/local/sbin/install-droidspaces-usb-manager --user "${USERNAME}"
 
 # 为 droidspaces 的 su/su -l 入口建立完整的 systemd 用户会话。
 RUN for pam_file in /etc/pam.d/su /etc/pam.d/su-l; do \
-        if ! grep -qE '^[[:space:]-]*session[[:space:]].*pam_systemd\.so' "$pam_file"; then \
-            sed -i '/^[[:space:]]*session[[:space:]].*pam_unix\.so/a\session        optional        pam_systemd.so' "$pam_file"; \
+        if ! grep -qE '^[[:space:]-]*session[[:space:]].*pam_systemd\\.so' "$pam_file"; then \
+            sed -i '/^[[:space:]]*session[[:space:]].*pam_unix\\.so/a\\session        optional        pam_systemd.so' "$pam_file"; \
         fi; \
     done && \
-    grep -qE '^[[:space:]]*session[[:space:]].*pam_env\.so' /etc/pam.d/su-l || \
+    grep -qE '^[[:space:]]*session[[:space:]].*pam_env\\.so' /etc/pam.d/su-l || \
         echo 'session        required        pam_env.so' >> /etc/pam.d/su-l
 
 # 添加环境变量
@@ -422,6 +423,17 @@ RUN if [ "$ENABLE_systemd257_ARG" = "true" ]; then \
         echo "--> [跳过] 未启用 systemd 257 旧内核兼容"; \
     fi && \
     rm -f /usr/local/sbin/systemd257
+
+# 安装 paru、Firefox 和 pcmanfm-qt（构建 paru 使用临时用户构建 AUR 包）
+RUN echo "--> Installing paru, firefox, pcmanfm-qt" && \
+    pacman -S --noconfirm --needed base-devel git rust --noconfirm && \
+    useradd -m builder || true && \
+    su - builder -c 'git clone --depth=1 https://aur.archlinux.org/paru-bin.git /home/builder/paru-bin && cd /home/builder/paru-bin && makepkg --noconfirm' || true && \
+    cp /home/builder/paru-bin/*.pkg.tar.* /tmp/ || true && \
+    pacman -U --noconfirm /tmp/*.pkg.tar.* || true && \
+    pacman -S --noconfirm --needed firefox pcmanfm-qt || true && \
+    rm -rf /home/builder /tmp/*.pkg.tar.* || true && \
+    pacman -Rns --noconfirm base-devel git rust || true
 
 # 彻底清理 pacman 缓存
 RUN rm -rf /var/cache/pacman/pkg/* /var/lib/pacman/sync/*
